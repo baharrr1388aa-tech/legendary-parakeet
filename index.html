@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#11152c"><title>نبرد دونفره 🎮</title>
+<style>
+:root{--bg:#11152c;--card:#202746;--pink:#ff5f91;--blue:#53d8fb;--gold:#ffd166;--text:#fff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#293260,#11152c 65%);color:var(--text);font-family:Tahoma,Arial,sans-serif;min-height:100vh;touch-action:manipulation}
+main{max-width:850px;margin:auto;padding:18px 14px 30px}header{text-align:center;padding:8px 0 18px}h1{margin:8px 0;font-size:clamp(28px,7vw,44px)}header p{color:#cbd4ff;margin:8px}
+.badge{display:inline-block;background:#353d69;padding:6px 12px;border-radius:99px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.game{background:linear-gradient(145deg,#252d50,#1a203b);border:1px solid #46517d;border-radius:20px;padding:18px 12px;text-align:center;cursor:pointer;color:white;font:inherit;min-height:145px;box-shadow:0 8px 20px #070a1b66}.game:active,.control:active{transform:scale(.98)}.emoji{font-size:42px;display:block;margin-bottom:7px}.game strong{font-size:17px}.game small{display:block;color:#bdc8ef;margin-top:7px;line-height:1.7}
+#arena{display:none}.topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0}.btn{border:0;border-radius:12px;padding:10px 14px;font:inherit;font-weight:bold;background:#3a456e;color:white;cursor:pointer}.scoreline{display:flex;justify-content:space-around;font-weight:bold;margin:12px 0}.p1{color:var(--pink)}.p2{color:var(--blue)}canvas{width:100%;height:min(48vh,380px);min-height:240px;background:#121a32;border:2px solid #46517d;border-radius:18px;display:block;touch-action:none}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.side{padding:12px;border-radius:16px;background:#202746;text-align:center}.side b{display:block;margin-bottom:8px}.control{width:100%;min-height:65px;border:0;border-radius:13px;color:#11152c;font-size:19px;font-weight:900;font-family:inherit;touch-action:manipulation}.left{background:var(--pink)}.right{background:var(--blue)}.hint{text-align:center;color:#c5ceef;line-height:1.8;font-size:13px;margin:12px 0}.hidden{display:none!important}.result{text-align:center;font-size:20px;font-weight:bold;min-height:28px;color:var(--gold);margin:8px}
+@media(max-width:420px){main{padding:12px 10px}.game{min-height:130px;padding:13px 7px}.emoji{font-size:35px}.side{padding:9px}.control{min-height:58px}}
+</style></head>
+<body><main>
+<header><span class="badge">🎮 بازی آفلاین • یک گوشی • دو بازیکن</span><h1>نبرد دونفره</h1><p>گوشی رو وسط بذارید؛ ببینیم کی قهرمانه! 🏆</p></header>
+<section id="menu"><div class="grid">
+<button class="game" data-game="rope"><span class="emoji">🪢</span><strong>طناب‌بازی</strong><small>به‌موقع بپر و از طناب جا نمون!</small></button>
+<button class="game" data-game="car"><span class="emoji">🏎️</span><strong>مسابقه ماشین</strong><small>از موانع رد شو و زودتر به خط پایان برس.</small></button>
+<button class="game" data-game="football"><span class="emoji">⚽</span><strong>ضربه پنالتی</strong><small>پنج شوت برای هر بازیکن؛ گل بیشتری بزن.</small></button>
+<button class="game" data-game="tap"><span class="emoji">⚡</span><strong>نبرد سرعت</strong><small>در ۱۰ ثانیه، سریع‌تر از رقیبت ضربه بزن.</small></button>
+</div><p class="hint">هر بازی روی همین گوشی اجرا می‌شه و اینترنت لازم نداره.</p></section>
+<section id="arena"><div class="topbar"><button class="btn" id="back">← منوی بازی‌ها</button><span class="badge" id="round">بازی دونفره</span><button class="btn" id="restart">شروع دوباره ↻</button></div>
+<div class="scoreline"><span class="p1">بازیکن ۱: <b id="s1">0</b></span><span class="p2">بازیکن ۲: <b id="s2">0</b></span></div>
+<canvas id="board" width="720" height="420" aria-label="صفحه بازی"></canvas><div class="result" id="result"></div>
+<div class="controls" id="controls"><div class="side"><b class="p1">بازیکن ۱ 👈</b><button class="control left" id="c1">بپر!</button></div><div class="side"><b class="p2">بازیکن ۲ 👉</b><button class="control right" id="c2">بپر!</button></div></div>
+<p class="hint" id="hint">برای بازی، دکمه‌ی خودت رو بزن.</p></section>
+</main>
+<script>
+(()=>{const $=id=>document.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d');let game='',s1=0,s2=0,active=false,raf=0,timer=null,state={},last=0;
+function score(a,b){s1=a;s2=b;$('s1').textContent=a;$('s2').textContent=b}
+function menu(){clearInterval(timer);cancelAnimationFrame(raf);active=false;$('arena').style.display='none';$('menu').style.display='block'}
+$('back').onclick=menu;$('restart').onclick=()=>start(game);
+document.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>start(b.dataset.game));
+function start(g){clearInterval(timer);cancelAnimationFrame(raf);game=g;active=true;state={};score(0,0);$('menu').style.display='none';$('arena').style.display='block';$('result').textContent='';
+const names={rope:'🪢 طناب‌بازی',car:'🏎️ مسابقه ماشین',football:'⚽ ضربه پنالتی',tap:'⚡ نبرد سرعت'};$('round').textContent=names[g];
+$('controls').classList.remove('hidden');
+if(g==='rope'){$('c1').textContent='پرش!';$('c2').textContent='پرش!';$('hint').textContent='هرکس به‌موقع بپرد امتیاز می‌گیرد. ۲۰ ثانیه وقت دارید!';state={angle:0,players:[0,0],time:20,ended:false};timer=setInterval(()=>{if(!active)return;state.time--;if(state.time<=0)finish('زمان تمام شد!');},1000);drawRope()}
+if(g==='car'){$('c1').textContent='⬅️ چپ';$('c2').textContent='➡️ راست';$('hint').textContent='با زدن دکمه‌ها ماشینت رو بین سه خط جابه‌جا کن؛ به موانع نخور!';state={lanes:[1,1],obs:[],pos:[0,0],speed:3,ended:false};for(let i=0;i<4;i++)state.obs.push({lane:Math.floor(Math.random()*3),y:-i*150-60});drawCar()}
+if(g==='football'){$('c1').textContent='شوت! ⚽';$('c2').textContent='شوت! ⚽';$('hint').textContent='هر بازیکن ۵ شوت دارد؛ برای هر شوت بزن و نتیجه رو ببین.';state={shots:[0,0],goals:[0,0],ended:false,keeper:1};drawFootball()}
+if(g==='tap'){$('c1').textContent='بزن! 👊';$('c2').textContent='بزن! 👊';$('hint').textContent='در ۱۰ ثانیه تا جایی که می‌تونی دکمه‌ات رو بزن!';state={time:10,ended:false};timer=setInterval(()=>{state.time--;if(state.time<=0)finish('وقت تمام شد!');else $('round').textContent='⏱️ '+state.time+' ثانیه'},1000);$('round').textContent='⏱️ 10 ثانیه';drawTap()}
+}
+function finish(msg){if(state.ended)return;state.ended=true;clearInterval(timer);$('result').textContent=msg+' '+(s1===s2?'مساوی!':s1>s2?'🏆 بازیکن ۱ برنده شد!':'🏆 بازیکن ۲ برنده شد!');}
+function press(n){if(!active||state.ended)return;
+if(game==='rope'){state.players[n-1]=1;const p=state.players;if(p[0]&&p[1]){score(s1+1,s2+1);state.players=[0,0];$('result').textContent='پرش هماهنگ! هر دو امتیاز گرفتید 🎉'}else{score(s1+(n===1?1:0),s2+(n===2?1:0));$('result').textContent='آفرین! حالا نوبت حریفه.'} }
+if(game==='car'){const i=n-1;state.lanes[i]=(state.lanes[i]+(Math.random()<.5?1:2))%3;state.pos[i]++;score(state.pos[0],state.pos[1]);if(state.pos[i]>=10)finish('ماشین به خط پایان رسید!');drawCar()}
+if(game==='football'){const i=n-1;state.shots[i]++;let goal=Math.random()>.38;if(goal)state.goals[i]++;score(state.goals[0],state.goals[1]);$('result').textContent=(goal?'🥅 گلللل!':'🧤 دروازه‌بان گرفت!')+' ('+state.shots[0]+'/5 - '+state.shots[1]+'/5)';drawFootball();if(state.shots[0]>=5&&state.shots[1]>=5)finish('پایان مسابقه پنالتی!')}
+if(game==='tap'){score(s1+(n===1?1:0),s2+(n===2?1:0));$('result').textContent='ادامه بده!';}
+}
+$('c1').addEventListener('pointerdown',e=>{e.preventDefault();press(1)});$('c2').addEventListener('pointerdown',e=>{e.preventDefault();press(2)});
+function text(t,x,y,size=28,color='#fff'){ctx.fillStyle=color;ctx.font='bold '+size+'px Tahoma,Arial';ctx.textAlign='center';ctx.fillText(t,x,y)}
+function drawRope(){if(!active||game!=='rope')return;ctx.clearRect(0,0,720,420);ctx.fillStyle='#172344';ctx.fillRect(0,0,720,420);ctx.strokeStyle='#ffd166';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(40,225);ctx.quadraticCurveTo(360,190+Math.sin(Date.now()/160)*60,680,225);ctx.stroke();text('🧍',180,280+Math.abs(Math.sin(Date.now()/160))*20,50,'#ff5f91');text('🧍',540,280+Math.abs(Math.sin(Date.now()/160))*20,50,'#53d8fb');text('🪢',360,105,48);text('زمان: '+(state.time||0),360,370,25,'#ffd166');raf=requestAnimationFrame(drawRope)}
+function drawCar(){if(!active||game!=='car')return;ctx.clearRect(0,0,720,420);ctx.fillStyle='#244536';ctx.fillRect(0,0,720,420);ctx.fillStyle='#444c60';ctx.fillRect(100,0,520,420);ctx.strokeStyle='#fff';ctx.setLineDash([22,18]);ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(273,0);ctx.lineTo(273,420);ctx.moveTo(447,0);ctx.lineTo(447,420);ctx.stroke();ctx.setLineDash([]);for(let i=0;i<3;i++){ctx.fillStyle='#ff5f91';ctx.fillRect(130+i*170,350,55,44);ctx.fillStyle='#53d8fb';ctx.fillRect(130+i*170,370,55,44)}state.obs.forEach((o,i)=>{ctx.fillStyle='#ffd166';ctx.fillRect(130+o.lane*170,((Date.now()/8+i*120)%500)-70,50,40)});text('🏎️',170+state.lanes[0]*170,335,45);text('🏎️',170+state.lanes[1]*170,390,45);text('مسافت',360,35,22);text(state.pos[0]+'  -  '+state.pos[1],360,68,26)}
+function drawFootball(){ctx.clearRect(0,0,720,420);ctx.fillStyle='#277a50';ctx.fillRect(0,0,720,420);ctx.strokeStyle='#d6ffe6';ctx.lineWidth=4;ctx.strokeRect(100,25,520,370);ctx.beginPath();ctx.arc(360,210,75,0,Math.PI*2);ctx.stroke();ctx.strokeRect(230,25,260,95);text('🥅',360,105,62);text('⚽',360,210,55);text('گل‌ها',360,290,25);text(state.goals?state.goals[0]+'  -  '+state.goals[1]:'0 - 0',360,330,32,'#ffd166');text('شوت‌ها: '+(state.shots?.[0]||0)+'/5  |  '+(state.shots?.[1]||0)+'/5',360,375,22)}
+function drawTap(){ctx.clearRect(0,0,720,420);ctx.fillStyle='#171d39';ctx.fillRect(0,0,720,420);ctx.fillStyle='#ff5f91';ctx.fillRect(0,0,350,420);ctx.fillStyle='#53d8fb';ctx.fillRect(370,0,350,420);text('👊',180,180,100);text('👊',540,180,100);text('بازیکن ۱',180,260,28,'#fff');text('بازیکن ۲',540,260,28,'#11152c');text(s1+'',180,330,45);text(s2+'',540,330,45)}
+// draw an initial frame for games that animate
+})();
+</script></body></html>
